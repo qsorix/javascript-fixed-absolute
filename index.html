@@ -1,0 +1,184 @@
+<head>
+  <meta charset="utf-8"/>
+  <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+  <script src="lorem.js" type="text/javascript"></script>
+<style>
+
+.wrapper {
+  position: relative;
+}
+
+.corner {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  border: 5px dashed #ddaaaa;
+  width: 180px;
+  height: 180px;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.left {
+  position: absolute;
+  top: 250px;
+  left: 0px;
+  border: 5px dashed gray;
+  width: 200px;
+}
+
+.right {
+  position: absolute;
+  top: 0px;
+  left: 250px;
+  width: calc(100vw - 400px);
+  border: 5px dashed #aaddaa;
+}
+
+.footer {
+  position: absolute;
+  top: 0px;
+  width: 657px;
+  border: 5px dashed #aaaadd;
+}
+
+</style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="corner" data-lorem="1"></div>
+    <div class="left" data-lorem="3"></div>
+    <div class="right" data-lorem="10"></div>
+    <div class="footer" data-lorem="1"></div>
+  </div>
+</body>
+
+<script>
+
+var isFixed = false
+
+function switchToFixedOrAbsolute(constraint) {
+  var element = $('.left')
+  var top = element.offset().top - window.pageYOffset;
+
+  if (constraint !== undefined) {
+    if (constraint.topEdge !== undefined) {
+      top = constraint.topEdge - window.pageYOffset;
+
+      if (top + window.pageYOffset < constraint.minTop) {
+        return switchToAbsolute({topEdge: constraint.minTop})
+      }
+    }
+    else if (constraint.bottomEdge !== undefined) {
+      top = constraint.bottomEdge - element.outerHeight() - window.pageYOffset;
+
+      if (top + window.pageYOffset + element.outerHeight() > constraint.maxBottom) {
+        return switchToAbsolute({bottomEdge: constraint.maxBottom})
+      }
+    }
+  }
+
+  element.css({
+    position: 'fixed',
+    top: top,
+    left: element.offset().left - window.pageXOffset,
+  });
+  isFixed = true
+}
+
+function switchToAbsolute(constraint) {
+  var element = $('.left')
+  var top = element.offset().top
+  var left = element.offset().left
+  var parentTop = element.parent().offset().top
+  var parentLeft = element.parent().offset().left
+
+  var top = top - parentTop
+  var left = left - parentLeft
+
+  if (constraint !== undefined) {
+    if (constraint.bottomEdge !== undefined) {
+      top = constraint.bottomEdge - parentTop - element.outerHeight();
+    } else if (constraint.topEdge !== undefined) {
+      top = constraint.topEdge - parentTop
+    }
+  }
+
+  element.css({
+    position: 'absolute',
+    top: top,
+    left: left,
+  });
+  isFixed = false
+}
+
+function getElementsTopEdgeOnPage() {
+  if (isFixed) {
+    return $('.left').offset().top
+    // return window.pageYOffset - $('.left').offset().top
+  } else {
+    return $('.left').offset().top
+  }
+}
+
+var previousYOffset = 0
+
+var elementMinTop;
+var elementMaxBottom;
+
+$(document).ready(function(){
+  elementMinTop = $(".left").offset().top;
+  elementMaxBottom = $(".right").outerHeight() + $(".right").offset().top;
+  $(".footer").css({
+      top: $('.right').outerHeight() + 20
+  })
+})
+
+$(window).on("scroll", function(e){
+  var element = $(".left")
+
+  var elementHeight = element.outerHeight()
+  var elementTopEdge = getElementsTopEdgeOnPage()
+  var elementBottomEdge = elementTopEdge + elementHeight
+
+  var yOffset = window.pageYOffset;
+  var yScreen = window.innerHeight;
+  var lowestVisible = yOffset + yScreen;
+  var highestVisible = yOffset
+
+  var direction = "down";
+  if (yOffset < previousYOffset) {
+    direction = "up";
+  }
+
+  if (direction === "down") {
+    if (elementBottomEdge >= elementMaxBottom) {
+      // absolute because at maximum bottom (can't go lower)
+      switchToAbsolute({bottomEdge: elementMaxBottom})
+    } else if (elementBottomEdge <= lowestVisible) {
+      // fixed, because at screen edge
+      switchToFixedOrAbsolute({bottomEdge: lowestVisible, maxBottom: elementMaxBottom})
+    } else {
+      // absolute because it still can scroll
+      switchToAbsolute()
+    }
+
+  } else if (direction === "up") {
+    if (elementTopEdge <= elementMinTop) {
+      // absolute because at minimum top offset (can't go higher)
+      switchToAbsolute({topEdge: elementMinTop});
+    } else if (elementTopEdge > highestVisible) {
+      // fixed, because at screen edge
+      switchToFixedOrAbsolute({topEdge: highestVisible, minTop: elementMinTop})
+    } else  {
+      // absolute because it still can scroll
+      switchToAbsolute()
+    }
+
+  }
+
+  previousYOffset = yOffset;
+})
+
+</script>
